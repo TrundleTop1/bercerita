@@ -9,8 +9,12 @@ import http.server
 import os
 import socketserver
 
+URL_MAPPINGS = {}
+
 
 class RequestHandler(http.server.SimpleHTTPRequestHandler):
+    global URL_MAPPINGS
+
     def translate_path(self, path):
         # Map .html, .css, .js, and image files automatically
         if (
@@ -24,8 +28,11 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
         ):
             return super().translate_path(path)
 
-        if path == "/":
-            return "index.html"
+        print(path)
+
+        if path in URL_MAPPINGS:
+            print("URL-M")
+            return URL_MAPPINGS[path]
 
         # If the URL doesn't have an extension, try to serve .html first
         html_path = super().translate_path(path + ".html")
@@ -56,10 +63,13 @@ if __name__ == "__main__":
     os.chdir(directory)
 
     # Automatically generate URL mappings for HTML files in the current directory
-    url_mappings = {}
-    for filename in os.listdir(directory):
-        if filename != "index.html" and filename.endswith(".html"):
-            url_mappings["/" + os.path.splitext(filename)[0]] = filename
+    for root, dirs, files in os.walk(directory):
+        for filename in files:
+            if filename.endswith(".html"):
+                base_path = os.path.join(root.replace(directory, ""), filename)
+                URL_MAPPINGS[base_path.replace("index.html", "")[:-1] or "/"] = (
+                    f".{base_path}" if base_path.startswith("/") else f"./{base_path}"
+                )
 
     serve_status = True
     while serve_status:
